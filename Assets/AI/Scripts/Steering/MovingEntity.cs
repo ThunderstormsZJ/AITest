@@ -7,6 +7,7 @@ namespace Steering
     public class MovingEntity : BaseGameEntity
     {
         // 最大速度
+        [Range(0, 5)]
         public float MaxSpeed;
 
         // 速度

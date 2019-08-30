@@ -8,9 +8,19 @@ namespace Steering
     {
         public GameWorld gameWorld;
 
-        protected Rigidbody entityRigidbody;
+        [Header("=======Wander Param=======")]
+        public float WanderRadius = 10; // 徘徊圆的半径
+        public float WanderDistance = 3f; //  徘徊圆在智能体前的位置
+        public float WanderJitter = 2f; // 徘徊每秒随机的最大值
+
         [HideInInspector]
         public SteeringBehaviors steeringBehaviors;
+
+        protected Rigidbody entityRigidbody;
+        protected BoxCollider boxCollider;
+        private Vector3 m_curVelocity;
+        private AIThirdPersonUserController userController;
+        private bool isUserController;
 
         protected override void OnStart()
         {
@@ -18,6 +28,10 @@ namespace Steering
 
             steeringBehaviors = new SteeringBehaviors(this);
             entityRigidbody = GetComponent<Rigidbody>();
+            boxCollider = GetComponent<BoxCollider>();
+            userController = GetComponent<AIThirdPersonUserController>();
+
+            isUserController = userController != null;
 
             m_fMass = entityRigidbody.mass;
         }
@@ -25,10 +39,17 @@ namespace Steering
         protected override void OnUpdate()
         {
             base.OnUpdate();
-
+            Vector3 steeringForce;
+            if (isUserController)
+            {
+                //Velocity = userController.moveVel * MaxSpeed;
+                steeringForce = userController.moveVel * 10;
+            }
+            else
+            {
+                steeringForce = steeringBehaviors.Calculate();
+            }
             // 加速度
-            Vector3 steeringForce = steeringBehaviors.Calculate();
-            Debug.Log(steeringForce);
             Vector3 acceleration = steeringForce / m_fMass;
 
             // 更新速度
@@ -36,20 +57,35 @@ namespace Steering
 
             // 确保不超过最大速度
             Velocity = Vector3.ClampMagnitude(Velocity, MaxSpeed);
+            Velocity = new Vector3(Velocity.x, 0, Velocity.z);
+#if UNITY_EDITOR
+            Debug.DrawLine(transform.position, transform.position + Velocity.normalized * 10, Color.black);
+#endif
+            if (steeringBehaviors.TargetPos != Vector3.zero)
+            {
+                Vector3 targetPos = steeringBehaviors.TargetPos;
+                float targetSqrDist = (targetPos - transform.position).sqrMagnitude;
+                if (targetSqrDist < 0.03)
+                {
+                    //临界情况
+                    transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref m_curVelocity, 0.5f, 0.5f);
+                    Velocity = Vector3.zero;
+                }
+            }
 
-            Debug.DrawLine(transform.position, transform.position+ acceleration.normalized * 10, Color.green);
+            if (Velocity != Vector3.zero)
+            {
+                //transform.forward = Vector3.Slerp(transform.forward, userController.moveVel.normalized, 0.3f);
+                // 更新朝向
+                Quaternion lookRotation = Quaternion.LookRotation(Velocity);
+                transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, 0.1f);
+                m_curVelocity = Velocity;
+            }
 
-            // 更新位置
-            //transform.position += Velocity * Time.deltaTime;
-            entityRigidbody.velocity = new Vector3(Velocity.x, entityRigidbody.velocity.y, Velocity.z);
+            entityRigidbody.velocity = Velocity;
 
-            // 速度远大于一个很小的值就更新朝向
-            //if (Velocity.magnitude > 0.00000001)
-            //{
-            //    m_vHeading = new Vector3(Velocity.y, transform.forward.y, Velocity.z);
-            //    transform.forward = m_vHeading;
-            //}
-
+            UpdateAnimator();
         }
+        protected virtual void UpdateAnimator() { }
     }
 }

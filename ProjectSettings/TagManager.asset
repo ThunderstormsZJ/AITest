@@ -15,8 +15,8 @@ TagManager:
   - 
   - 
   - Ground
-  - Env_Rock
-  - Env_Tree
+  - Target
+  - Obstacle
   - 
   - 
   - 
