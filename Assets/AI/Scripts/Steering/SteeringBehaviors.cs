@@ -113,6 +113,8 @@ namespace Steering
             return (targetWorld - CurVehicle.transform.position);
         }
 
+        // 避开障碍
+
         public Vector3 Calculate()
         {
             Transform target = CurVehicle.gameWorld.TargetPicker;

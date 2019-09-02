@@ -239,6 +239,37 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &269211867 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2537172218657203805, guid: f4c48fdacece3464f9b48a66f3302c09,
+    type: 3}
+  m_PrefabInstance: {fileID: 2537172219137314524}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &269211868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 269211867}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a8f4dae74530a44f9f8cfea908672f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ViewRadius: 5.57
+  ViewAngle: 86
+  TargetMask:
+    serializedVersion: 2
+    m_Bits: 512
+  ObstacleMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  MeshResolution: 1
+  EdgeResolveIterations: 10
+  EdgeDstThreshold: 0.5
+  ViewMaterial: {fileID: 2100000, guid: d7baab13d9cdf7f42a89eb87abe164da, type: 2}
+  VisibleTargets: []
 --- !u!1001 &441203280
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1357,7 +1388,7 @@ PrefabInstance:
     - target: {fileID: 2537172218657203805, guid: f4c48fdacece3464f9b48a66f3302c09,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2537172218657203805, guid: f4c48fdacece3464f9b48a66f3302c09,
         type: 3}
@@ -1482,6 +1513,10 @@ MonoBehaviour:
   ObstacleMask:
     serializedVersion: 2
     m_Bits: 1024
+  MeshResolution: 1
+  EdgeResolveIterations: 10
+  EdgeDstThreshold: 0.5
+  ViewMaterial: {fileID: 2100000, guid: d7baab13d9cdf7f42a89eb87abe164da, type: 2}
   VisibleTargets: []
 --- !u!1 &1976977357
 GameObject:

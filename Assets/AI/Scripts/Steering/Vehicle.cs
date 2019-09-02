@@ -31,7 +31,7 @@ namespace Steering
             boxCollider = GetComponent<BoxCollider>();
             userController = GetComponent<AIThirdPersonUserController>();
 
-            isUserController = userController != null;
+            isUserController = userController != null && userController.enabled;
 
             m_fMass = entityRigidbody.mass;
         }
