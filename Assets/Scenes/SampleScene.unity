@@ -1700,15 +1700,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1556425065, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
       propertyPath: WanderRadius
-      value: 10
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 1556425065, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
       propertyPath: WanderDistance
-      value: 3
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1556425065, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
       propertyPath: WanderJitter
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1556425065, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
       propertyPath: test

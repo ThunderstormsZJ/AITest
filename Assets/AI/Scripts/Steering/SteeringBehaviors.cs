@@ -12,6 +12,8 @@ namespace Steering
         public Vehicle EscapeVehicle { get; set; }
         public Vector3 TargetPos { get; private set; }
 
+        public enum Deceleration { slow=3, normal=2, fast=1, }
+
         Vector3 m_wanderTarget; // 徘徊的点
 
         public SteeringBehaviors(Vehicle vehicle)
@@ -43,7 +45,7 @@ namespace Steering
         }
 
         // 抵达
-        public Vector3 Arrive(Vector3 targetPos)
+        public Vector3 Arrive(Vector3 targetPos, Deceleration deceleration = Deceleration.normal)
         {
             Vector3 toTarget = targetPos - CurVehicle.transform.position;
             float dist = toTarget.magnitude;
@@ -51,8 +53,8 @@ namespace Steering
             if (dist > 0)
             {
                 // 计算期望的速度
-                float speed = dist / (2 * 0.8f);
-                speed = Mathf.Clamp(speed, 0.5f, CurVehicle.MaxSpeed);
+                float speed = dist / ((int)deceleration * 0.8f);
+                speed = Mathf.Clamp(speed, 1f, CurVehicle.MaxSpeed);
 
                 // 不需要标准化向量， 因为能够取得向量长度
                 Vector3 desiredVelocity = toTarget * speed / dist;
@@ -108,7 +110,8 @@ namespace Steering
             // 加上与智能体的距离
             Vector3 targetLocal = m_wanderTarget + new Vector3(0, 0, CurVehicle.WanderDistance);
 
-            Vector3 targetWorld = CurVehicle.transform.TransformPoint(targetLocal);
+            //Vector3 targetWorld = CurVehicle.transform.TransformPoint(targetLocal);
+            Vector3 targetWorld = AIUtils.TransformPointUnscaled(CurVehicle.transform, targetLocal);
 
             return (targetWorld - CurVehicle.transform.position);
         }
@@ -178,6 +181,14 @@ namespace Steering
             return force;
         }
 
+        // 插入
+        public Vector3 Interpose(Vehicle vehicleA, Vehicle vehicleB)
+        {
+            // 
+
+            return Vector3.zero;
+        }
+
         public Vector3 Calculate()
         {
             Transform target = CurVehicle.gameWorld.TargetPicker;
@@ -195,7 +206,7 @@ namespace Steering
                 return Evade(EscapeVehicle) * ForceMultiple;
             }
 
-            //return (Wander() + 2 * ObstacleAvoidance()) * ForceMultiple;
+            //return (Arrive(targetPos) + 2 * ObstacleAvoidance()) * ForceMultiple;
             return (Wander() + 2 * ObstacleAvoidance() + 2 * WallAvoidance()) * ForceMultiple;
         }
 
