@@ -9,12 +9,13 @@ public class FieldOfView : MonoBehaviour
     public float ViewRadius;
     [Range(0, 360)]
     public float ViewAngle;
-    public LayerMask TargetMask; // 目标
-    public LayerMask ObstacleMask; // 障碍物
     public float MeshResolution = 1;
     public int EdgeResolveIterations = 10;
     public float EdgeDstThreshold = 0.5f;
     public Material ViewMaterial;
+    public LayerMask TargetMask; // 目标
+    public LayerMask ObstacleMask; // 障碍物
+    public LayerMask WallMask; // 墙壁
 
     [HideInInspector]
     public List<Transform> VisibleTargets = new List<Transform>();
@@ -27,7 +28,7 @@ public class FieldOfView : MonoBehaviour
         CreateViewMesh();
 #endif
 
-        StartCoroutine(FindTargetsWithDelay(.2f));
+        StartCoroutine(FindWithDelay(.2f));
     }
 
     void Update()
@@ -41,12 +42,12 @@ public class FieldOfView : MonoBehaviour
 #endif 
     }
 
-    IEnumerator FindTargetsWithDelay(float delay)
+    IEnumerator FindWithDelay(float delay)
     {
         while (true)
         {
             yield return new WaitForSeconds(delay);
-            FindVisibleTargets();
+            //FindVisibleTargets();
         }
     }
 
@@ -54,73 +55,104 @@ public class FieldOfView : MonoBehaviour
     void FindVisibleTargets()
     {
         VisibleTargets.Clear();
-         Collider[] targetsInViewRadius = Physics.OverlapSphere(transform.position, ViewRadius, TargetMask);
+        Collider[] targetsInViewRadius = Physics.OverlapSphere(transform.position, ViewRadius, TargetMask);
 
         for (int i = 0; i < targetsInViewRadius.Length; i++)
         {
             Transform target = targetsInViewRadius[i].transform;
-            Vector3 vecToTarget = target.position - transform.position;
-            Vector3 dirToTarget = vecToTarget.normalized;
-            if (Vector3.Angle(transform.forward, dirToTarget) < ViewAngle / 2)
+            if (CheckInView(target, ObstacleMask))
             {
-                // 判断是否在视野范围之内
-                if (!Physics.Raycast(transform.position, dirToTarget, vecToTarget.magnitude, ObstacleMask))
-                {
-                    VisibleTargets.Add(target);
-                }
+                VisibleTargets.Add(target);
             }
         }
     }
 
-    // 画网格
-    void DrawFieldOfView()
+    /// <summary>
+    /// 检测目标是否在视野范围内
+    /// 检测中间是否有障碍物
+    /// </summary>
+    /// <param name="target">目标物体</param>
+    /// <param name="ObstacleMask">障碍物体</param>
+    /// <returns>bool</returns>
+    bool CheckInView(Transform target, int ObstaclesMask=-1)
     {
+        Vector3 vecToTarget = target.position - transform.position;
+        Vector3 dirToTarget = vecToTarget.normalized;
+        if (Vector3.Angle(transform.forward, dirToTarget) < ViewAngle / 2)
+        {
+            if(ObstaclesMask >= 0)
+            {
+                if (!Physics.Raycast(transform.position, dirToTarget, vecToTarget.magnitude, ObstaclesMask)){
+                    return true;
+                }
+
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // 根据扇形区域获取所有碰撞点
+    public List<ViewCastInfo> GetAllViewCastInfo(int viewMask, bool isHitPoint = false)
+    {
+        List<ViewCastInfo> viewCastInfoList = new List<ViewCastInfo>();
         int stepCount = Mathf.RoundToInt(ViewAngle * MeshResolution);
-        if (stepCount == 0) return;
+        if (stepCount == 0) return viewCastInfoList;
         float stepAngleSize = ViewAngle / stepCount;
-        List<Vector3> viewPoints = new List<Vector3>();
 
         ViewCastInfo oldCastInfo = new ViewCastInfo();
         for (int i = 0; i <= stepCount; i++)
         {
-            float angle = transform.eulerAngles.y - ViewAngle/2 + i * stepAngleSize;
-            ViewCastInfo newCastInfo = ViewCast(angle);
+            float angle = transform.eulerAngles.y - ViewAngle / 2 + i * stepAngleSize;
+            ViewCastInfo newCastInfo = ViewCast(angle, viewMask);
 
             if (i > 0)
             {
                 // 计算边界的点
                 // 两点之间距离超过阈值也加入检测
                 bool edgeDstThresholdExceed = Mathf.Abs(oldCastInfo.dst - newCastInfo.dst) > EdgeDstThreshold;
-                if (oldCastInfo.hit != newCastInfo.hit && (oldCastInfo.hit && newCastInfo.hit && edgeDstThresholdExceed))
+                if (oldCastInfo.hit != newCastInfo.hit || (oldCastInfo.hit && newCastInfo.hit && edgeDstThresholdExceed))
                 {
                     // 只在有障碍物和无障碍物之间的点检测
-                    EdgetInfo edgetInfo = FindEdget(oldCastInfo, newCastInfo);
-                    if (edgetInfo.minPointer != Vector3.zero)
+                    EdgetInfo edgetInfo = FindEdget(oldCastInfo, newCastInfo, viewMask);
+                    if (edgetInfo.minCastInfo.pointer != Vector3.zero)
                     {
-                        viewPoints.Add(edgetInfo.minPointer);
-                        Debug.DrawLine(transform.position, edgetInfo.minPointer, Color.black);
+                        viewCastInfoList.Add(edgetInfo.minCastInfo);
+                        Debug.DrawLine(transform.position, edgetInfo.minCastInfo.pointer, Color.black);
                     }
-                    if (edgetInfo.maxPointer != Vector3.zero)
+                    if (edgetInfo.maxCastInfo.pointer != Vector3.zero)
                     {
-                        viewPoints.Add(edgetInfo.maxPointer);
-                        Debug.DrawLine(transform.position, edgetInfo.maxPointer, Color.black);
+                        viewCastInfoList.Add(edgetInfo.maxCastInfo);
+                        Debug.DrawLine(transform.position, edgetInfo.maxCastInfo.pointer, Color.black);
                     }
                 }
             }
 
-            viewPoints.Add(newCastInfo.pointer);
+            if (!isHitPoint || newCastInfo.hit)
+            {
+                viewCastInfoList.Add(newCastInfo);
+            }
             oldCastInfo = newCastInfo;
 
             Debug.DrawLine(transform.position, newCastInfo.pointer, Color.black);
         }
-        int vertexCount = viewPoints.Count + 1;
+
+        return viewCastInfoList;
+    }
+
+    // 画网格
+    void DrawFieldOfView()
+    {
+        List<ViewCastInfo> viewCastInfoList = GetAllViewCastInfo(ObstacleMask | WallMask);
+        int vertexCount = viewCastInfoList.Count + 1;
         Vector3[] vertices = new Vector3[vertexCount]; // 绘制Mesh顶点集合
         int[] triangles = new int[(vertexCount - 2) * 3]; // 绘制Mesh的三角形信息
 
         vertices[0] = Vector3.zero;
         for (int i = 0; i < vertexCount - 1; i++)
         {
-            vertices[i + 1] = transform.InverseTransformPoint(viewPoints[i]);
+            vertices[i + 1] = transform.InverseTransformPoint(viewCastInfoList[i].pointer);
             if (i < vertexCount - 2)
             {
                 triangles[i*3] = 0;
@@ -140,12 +172,12 @@ public class FieldOfView : MonoBehaviour
     /// </summary>
     /// <param name="globalAngle">视野内范围内的角度值</param>
     /// <returns></returns>
-    ViewCastInfo ViewCast(float globalAngle)
+    ViewCastInfo ViewCast(float globalAngle, int viewMask)
     {
         Vector3 dir = DirFromAngle(globalAngle, true);
         RaycastHit hit;
 
-        if(Physics.Raycast(transform.position, dir, out hit, ViewRadius, ObstacleMask)){
+        if(Physics.Raycast(transform.position, dir, out hit, ViewRadius, viewMask)){
             return new ViewCastInfo(true, hit.point, hit.distance, globalAngle);
         }else{
             return new ViewCastInfo(false, transform.position + dir * ViewRadius, hit.distance, globalAngle);
@@ -158,32 +190,32 @@ public class FieldOfView : MonoBehaviour
     /// <param name="minCastInfo">最小点的信息</param>
     /// <param name="maxCastInfo">最大点的信息</param>
     /// <returns></returns>
-    EdgetInfo FindEdget(ViewCastInfo minCastInfo, ViewCastInfo maxCastInfo)
+    EdgetInfo FindEdget(ViewCastInfo minCastInfo, ViewCastInfo maxCastInfo, int viewMask)
     {
         float minAngle = minCastInfo.angle;
         float maxAngle = maxCastInfo.angle;
-        Vector3 minPointer = Vector3.zero;
-        Vector3 maxPointer = Vector3.zero;
+        ViewCastInfo minVCI = new ViewCastInfo();
+        ViewCastInfo maxVCI = new ViewCastInfo();
 
         for (int i = 0; i < EdgeResolveIterations; i++)
         {
             float angle = (minAngle + maxAngle) / 2;
-            ViewCastInfo castInfo = ViewCast(angle);
+            ViewCastInfo castInfo = ViewCast(angle, viewMask);
             bool edgeDstThresholdExceed = Mathf.Abs(castInfo.dst - maxCastInfo.dst) > EdgeDstThreshold;
             // 接触到障碍物的为最低点
             if (castInfo.hit == minCastInfo.hit && !edgeDstThresholdExceed)
             {
                 minAngle = castInfo.angle;
-                minPointer = castInfo.pointer;
+                minVCI = castInfo;
             }
             else
             {
                 maxAngle = castInfo.angle;
-                maxPointer = castInfo.pointer;
+                maxVCI = castInfo;
             }
         }
 
-        return new EdgetInfo(minPointer, maxPointer);
+        return new EdgetInfo(minVCI, maxVCI);
     }
 
     // 创建ViewMesh
@@ -236,18 +268,18 @@ public class FieldOfView : MonoBehaviour
     // 边界信息
     public struct EdgetInfo
     {
-        public Vector3 minPointer;
-        public Vector3 maxPointer;
+        public ViewCastInfo minCastInfo;
+        public ViewCastInfo maxCastInfo;
 
-        public EdgetInfo(Vector3 minPointer, Vector3 maxPointer)
+        public EdgetInfo(ViewCastInfo minCastInfo, ViewCastInfo maxCastInfo)
         {
-            this.minPointer = minPointer;
-            this.maxPointer = maxPointer;
+            this.minCastInfo = minCastInfo;
+            this.maxCastInfo = maxCastInfo;
         }
 
         public override string ToString()
         {
-            return minPointer + "  " + maxPointer;
+            return minCastInfo.pointer + "  " + maxCastInfo.pointer;
         }
     }
 }

@@ -16,12 +16,22 @@ public class BaseGameEntity : MonoBehaviour
         OnUpdate();
     }
 
+    void FixedUpdate()
+    {
+        OnFixedUpdate();
+    }
+
     protected virtual void OnStart()
     {
 
     }
 
     protected virtual void OnUpdate()
+    {
+
+    }
+
+    protected virtual void OnFixedUpdate()
     {
 
     }

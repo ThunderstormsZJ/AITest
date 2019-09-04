@@ -114,6 +114,64 @@ namespace Steering
         }
 
         // 避开障碍
+        public Vector3 ObstacleAvoidance()
+        {
+            // 找到最近的障碍物
+            Vector3 force = Vector3.zero;
+            List<FieldOfView.ViewCastInfo> castInfoList = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask("Obstacle"), true);
+            if (castInfoList.Count>0)
+            {
+                // 获取最近的点
+                Vector3 closetPoint = castInfoList[0].pointer;
+                for (int i = 1; i < castInfoList.Count; i++)
+                {
+                    if (closetPoint.sqrMagnitude > castInfoList[i].pointer.sqrMagnitude)
+                    {
+                        closetPoint = castInfoList[i].pointer;
+                    }
+                }
+                Vector3 localClosetPoint =AIUtils.InverseTransformPointUnscaled(CurVehicle.transform, closetPoint);
+                float fieldViewR = CurVehicle.fieldOfView.ViewRadius;
+                // 力的大小与距离成反比a
+                float forceBase = 1;
+                float xDisMul = 1 + (fieldViewR - Mathf.Abs(localClosetPoint.x)) / fieldViewR;
+                float zDisMul = 1 + (fieldViewR - Mathf.Abs(localClosetPoint.z)) / fieldViewR;
+                // 计算侧向力
+                force.x = forceBase * xDisMul * zDisMul * (localClosetPoint.x > 0 ? -1 : 1);
+
+                // 计算制动力
+                force.z = - forceBase * zDisMul;
+
+                force = AIUtils.TransformPointUnscaled(CurVehicle.transform, force) - CurVehicle.transform.position;
+
+                Debug.DrawLine(CurVehicle.transform.position, force, Color.red);
+
+            }
+            return force;
+        }
+
+        // 避开墙
+        public Vector3 WallAvoidance()
+        {
+            Vector3 force = Vector3.zero;
+            //List<Vector3> castPoints = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask("Wall"), true);
+            //if (castPoints.Count > 0)
+            //{
+            //    // 获取最近的点
+            //    Vector3 closetPoint = castPoints[0];
+            //    for (int i = 1; i < castPoints.Count; i++)
+            //    {
+            //        if (closetPoint.sqrMagnitude > castPoints[i].sqrMagnitude)
+            //        {
+            //            closetPoint = castPoints[i];
+            //        }
+            //    }
+
+
+            //}
+
+            return force;
+        }
 
         public Vector3 Calculate()
         {
@@ -132,9 +190,8 @@ namespace Steering
                 return Evade(EscapeVehicle) * ForceMultiple;
             }
 
-            //return Wander() * ForceMultiple;
-
-            return Arrive(targetPos) * ForceMultiple;
+            //return (Wander() + 2 * ObstacleAvoidance()) * ForceMultiple;
+            return (Arrive(targetPos) + 2 * ObstacleAvoidance()) * ForceMultiple;
         }
 
         /// <summary>

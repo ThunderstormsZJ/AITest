@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Steering
 {
+    [RequireComponent(typeof(FieldOfView))]
     public class Vehicle : MovingEntity
     {
         public GameWorld gameWorld;
@@ -15,6 +16,8 @@ namespace Steering
 
         [HideInInspector]
         public SteeringBehaviors steeringBehaviors;
+        [HideInInspector]
+        public FieldOfView fieldOfView;
 
         protected Rigidbody entityRigidbody;
         protected BoxCollider boxCollider;
@@ -30,6 +33,7 @@ namespace Steering
             entityRigidbody = GetComponent<Rigidbody>();
             boxCollider = GetComponent<BoxCollider>();
             userController = GetComponent<AIThirdPersonUserController>();
+            fieldOfView = GetComponent<FieldOfView>();
 
             isUserController = userController != null && userController.enabled;
 
@@ -39,6 +43,13 @@ namespace Steering
         protected override void OnUpdate()
         {
             base.OnUpdate();
+            UpdateAnimator();
+        }
+
+        protected override void OnFixedUpdate()
+        {
+            base.OnFixedUpdate();
+
             Vector3 steeringForce;
             if (isUserController)
             {
@@ -83,9 +94,8 @@ namespace Steering
             }
 
             entityRigidbody.velocity = Velocity;
-
-            UpdateAnimator();
         }
+
         protected virtual void UpdateAnimator() { }
     }
 }

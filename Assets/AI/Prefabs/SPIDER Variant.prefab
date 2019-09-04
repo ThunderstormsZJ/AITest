@@ -61,6 +61,40 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MaxSpeed: 5
+  gameWorld: {fileID: 0}
+  WanderRadius: 10
+  WanderDistance: 3
+  WanderJitter: 2
+  fieldOfView: {fileID: 0}
+  EscapeVehicle: {fileID: 0}
+--- !u!114 &187501855710213359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2537172218657203805}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a8f4dae74530a44f9f8cfea908672f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ViewRadius: 6
+  ViewAngle: 60
+  MeshResolution: 0.15
+  EdgeResolveIterations: 10
+  EdgeDstThreshold: 0.5
+  ViewMaterial: {fileID: 2100000, guid: d7baab13d9cdf7f42a89eb87abe164da, type: 2}
+  TargetMask:
+    serializedVersion: 2
+    m_Bits: 512
+  ObstacleMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  WallMask:
+    serializedVersion: 2
+    m_Bits: 2048
+  VisibleTargets: []
 --- !u!1001 &2537172218657169759
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -70,7 +104,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 100098, guid: 130cac6b96af6214296215324b5da188, type: 3}
       propertyPath: m_Name
-      value: SPIDER
+      value: SPIDER Variant
       objectReference: {fileID: 0}
     - target: {fileID: 400098, guid: 130cac6b96af6214296215324b5da188, type: 3}
       propertyPath: m_LocalPosition.x
