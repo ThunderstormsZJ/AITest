@@ -178,9 +178,9 @@ public class FieldOfView : MonoBehaviour
         RaycastHit hit;
 
         if(Physics.Raycast(transform.position, dir, out hit, ViewRadius, viewMask)){
-            return new ViewCastInfo(true, hit.point, hit.distance, globalAngle);
+            return new ViewCastInfo(true, hit.point, hit.normal, hit.distance, globalAngle);
         }else{
-            return new ViewCastInfo(false, transform.position + dir * ViewRadius, hit.distance, globalAngle);
+            return new ViewCastInfo(false, transform.position + dir * ViewRadius, hit.normal, hit.distance, globalAngle);
         }
     }
 
@@ -253,13 +253,15 @@ public class FieldOfView : MonoBehaviour
     {
         public bool hit;
         public Vector3 pointer;
+        public Vector3 normal;
         public float dst;
         public float angle;
 
-        public ViewCastInfo(bool hit, Vector3 pointer, float dst, float angle)
+        public ViewCastInfo(bool hit, Vector3 pointer, Vector3 normal, float dst, float angle)
         {
             this.hit = hit;
             this.pointer = pointer;
+            this.normal = normal;
             this.dst = dst;
             this.angle = angle;
         }

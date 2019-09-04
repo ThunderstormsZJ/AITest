@@ -144,7 +144,7 @@ namespace Steering
 
                 force = AIUtils.TransformPointUnscaled(CurVehicle.transform, force) - CurVehicle.transform.position;
 
-                Debug.DrawLine(CurVehicle.transform.position, force, Color.red);
+                Debug.DrawLine(CurVehicle.transform.position, CurVehicle.transform.position + force.normalized * 10, Color.red);
 
             }
             return force;
@@ -154,21 +154,26 @@ namespace Steering
         public Vector3 WallAvoidance()
         {
             Vector3 force = Vector3.zero;
-            //List<Vector3> castPoints = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask("Wall"), true);
-            //if (castPoints.Count > 0)
-            //{
-            //    // 获取最近的点
-            //    Vector3 closetPoint = castPoints[0];
-            //    for (int i = 1; i < castPoints.Count; i++)
-            //    {
-            //        if (closetPoint.sqrMagnitude > castPoints[i].sqrMagnitude)
-            //        {
-            //            closetPoint = castPoints[i];
-            //        }
-            //    }
+            List<FieldOfView.ViewCastInfo> castInfoList = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask("Wall"), true);
+            if (castInfoList.Count > 0)
+            {
+                // 最近的碰撞信息
+                FieldOfView.ViewCastInfo closetCastInfo = castInfoList[0];
+                for (int i = 1; i < castInfoList.Count; i++)
+                {
+                    if (closetCastInfo.pointer.sqrMagnitude > castInfoList[i].pointer.sqrMagnitude)
+                    {
+                        closetCastInfo = castInfoList[i];
+                    }
+                }
 
+                // 根据碰撞的法线算出力的大小
+                float fieldViewR = CurVehicle.fieldOfView.ViewRadius;
 
-            //}
+                force = closetCastInfo.normal * (fieldViewR - Vector3.Distance(CurVehicle.transform.position, closetCastInfo.pointer));
+
+                Debug.DrawLine(CurVehicle.transform.position, CurVehicle.transform.position + force.normalized * 10, Color.red);
+            }
 
             return force;
         }
@@ -191,7 +196,7 @@ namespace Steering
             }
 
             //return (Wander() + 2 * ObstacleAvoidance()) * ForceMultiple;
-            return (Arrive(targetPos) + 2 * ObstacleAvoidance()) * ForceMultiple;
+            return (Wander() + 2 * ObstacleAvoidance() + 2 * WallAvoidance()) * ForceMultiple;
         }
 
         /// <summary>
