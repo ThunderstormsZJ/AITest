@@ -14,6 +14,10 @@ namespace Steering
         public float WanderDistance = 3f; //  徘徊圆在智能体前的位置
         public float WanderJitter = 2f; // 徘徊每秒随机的最大值
 
+        [Header("==========Target==========")]
+        public Vehicle EscapeVehicle;
+        public Vehicle HideVehicle;
+
         [HideInInspector]
         public SteeringBehaviors steeringBehaviors;
         [HideInInspector]

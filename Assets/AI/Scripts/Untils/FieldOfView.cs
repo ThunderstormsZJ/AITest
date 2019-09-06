@@ -33,6 +33,7 @@ public class FieldOfView : MonoBehaviour
 
     void Update()
     {
+               
     }
 
     void LateUpdate()
@@ -74,11 +75,11 @@ public class FieldOfView : MonoBehaviour
     /// <param name="target">目标物体</param>
     /// <param name="ObstacleMask">障碍物体</param>
     /// <returns>bool</returns>
-    bool CheckInView(Transform target, int ObstaclesMask=-1)
+    public bool CheckInView(Transform target, int ObstaclesMask=-1)
     {
         Vector3 vecToTarget = target.position - transform.position;
         Vector3 dirToTarget = vecToTarget.normalized;
-        if (Vector3.Angle(transform.forward, dirToTarget) < ViewAngle / 2)
+        if (Vector3.Angle(transform.forward, dirToTarget) < ViewAngle / 2 && vecToTarget.sqrMagnitude < ViewRadius * ViewRadius)
         {
             if(ObstaclesMask >= 0)
             {
@@ -119,12 +120,10 @@ public class FieldOfView : MonoBehaviour
                     if (edgetInfo.minCastInfo.pointer != Vector3.zero)
                     {
                         viewCastInfoList.Add(edgetInfo.minCastInfo);
-                        Debug.DrawLine(transform.position, edgetInfo.minCastInfo.pointer, Color.black);
                     }
                     if (edgetInfo.maxCastInfo.pointer != Vector3.zero)
                     {
                         viewCastInfoList.Add(edgetInfo.maxCastInfo);
-                        Debug.DrawLine(transform.position, edgetInfo.maxCastInfo.pointer, Color.black);
                     }
                 }
             }
@@ -134,8 +133,6 @@ public class FieldOfView : MonoBehaviour
                 viewCastInfoList.Add(newCastInfo);
             }
             oldCastInfo = newCastInfo;
-
-            Debug.DrawLine(transform.position, newCastInfo.pointer, Color.black);
         }
 
         return viewCastInfoList;
@@ -153,6 +150,7 @@ public class FieldOfView : MonoBehaviour
         for (int i = 0; i < vertexCount - 1; i++)
         {
             vertices[i + 1] = transform.InverseTransformPoint(viewCastInfoList[i].pointer);
+            Debug.DrawLine(transform.position, viewCastInfoList[i].pointer, Color.black);
             if (i < vertexCount - 2)
             {
                 triangles[i*3] = 0;
@@ -223,6 +221,7 @@ public class FieldOfView : MonoBehaviour
     {
         GameObject viewMeshObject = new GameObject("ViewMesh");
         viewMeshObject.transform.parent = transform;
+        viewMeshObject.transform.rotation = transform.localRotation;
         viewMeshObject.transform.localScale = Vector3.one;
         viewMeshObject.transform.localPosition = new Vector3(0, 1, 0);
 

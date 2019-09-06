@@ -9,12 +9,15 @@ namespace Steering
         public float ForceMultiple = 2; //力的乘数 -- 可以影响转向的灵敏程度
 
         public Vehicle CurVehicle { get; private set; }
-        public Vehicle EscapeVehicle { get; set; }
         public Vector3 TargetPos { get; private set; }
 
         public enum Deceleration { slow=3, normal=2, fast=1, }
+        public readonly string ObstacleMaskName = "Obstacle";
+        public readonly string WallMaskName = "Wall";
 
         Vector3 m_wanderTarget; // 徘徊的点
+        Vector3 m_hideTarget; // 隐藏的点
+        float m_memoryTime; // 记忆时间
 
         public SteeringBehaviors(Vehicle vehicle)
         {
@@ -103,7 +106,7 @@ namespace Steering
         // 徘徊
         public Vector3 Wander()
         {
-            float jitterTimeSlice = CurVehicle.WanderJitter * Time.deltaTime * 1000;
+            float jitterTimeSlice = CurVehicle.WanderJitter * Time.fixedDeltaTime * 1000;
             m_wanderTarget += new Vector3(Random.Range(-1.0f, 1.0f) * jitterTimeSlice, 0, Random.Range(-1.0f, 1.0f) * jitterTimeSlice);
             // 重新映射到圆上
             m_wanderTarget = m_wanderTarget.normalized * CurVehicle.WanderRadius;
@@ -121,7 +124,7 @@ namespace Steering
         {
             // 找到最近的障碍物
             Vector3 force = Vector3.zero;
-            List<FieldOfView.ViewCastInfo> castInfoList = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask("Obstacle"), true);
+            List<FieldOfView.ViewCastInfo> castInfoList = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask(ObstacleMaskName), true);
             if (castInfoList.Count>0)
             {
                 // 获取最近的点
@@ -157,7 +160,7 @@ namespace Steering
         public Vector3 WallAvoidance()
         {
             Vector3 force = Vector3.zero;
-            List<FieldOfView.ViewCastInfo> castInfoList = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask("Wall"), true);
+            List<FieldOfView.ViewCastInfo> castInfoList = CurVehicle.fieldOfView.GetAllViewCastInfo(LayerMask.GetMask(WallMaskName), true);
             if (castInfoList.Count > 0)
             {
                 // 最近的碰撞信息
@@ -184,9 +187,88 @@ namespace Steering
         // 插入
         public Vector3 Interpose(Vehicle vehicleA, Vehicle vehicleB)
         {
-            // 
+            // 预测时间- 到达两个物体中点的时间
+            Vector3 midPoint = (vehicleA.transform.position + vehicleB.transform.position) / 2;
+            float timeToReachMidPoint = (midPoint - CurVehicle.transform.position).magnitude / CurVehicle.MaxSpeed;
+
+            // 预测在T时间内两物体的位置
+            Vector3 aPoint = vehicleA.transform.position + vehicleA.Velocity * timeToReachMidPoint;
+            Vector3 bPoint = vehicleB.transform.position + vehicleB.Velocity * timeToReachMidPoint;
+
+            // 计算目标点， 到达该位置
+            midPoint = (aPoint + bPoint) / 2;
+
+            return Arrive(midPoint);
+        }
+
+        // 躲避物体
+        public Vector3 Hide(Vehicle vehicle)
+        {
+            // 加上时间元素
+            m_memoryTime += Time.fixedDeltaTime;
+            if (m_hideTarget != Vector3.zero && m_memoryTime < 15)
+            {
+                Debug.DrawLine(CurVehicle.transform.position, m_hideTarget, Color.blue);
+                return Arrive(m_hideTarget, Deceleration.fast);
+            }
+
+            // 目标是否在物体可视范围
+            // 物体是否发现目标
+            if(CurVehicle.fieldOfView.CheckInView(vehicle.transform, LayerMask.GetMask(ObstacleMaskName)))
+            {
+                if (vehicle.fieldOfView.CheckInView(CurVehicle.transform, LayerMask.GetMask(ObstacleMaskName)))
+                {
+                    // 找一定范围内的躲避物
+                    if (GetHidingPosition(out m_hideTarget))
+                    {
+                        Debug.DrawLine(CurVehicle.transform.position, m_hideTarget, Color.blue);
+                        return Arrive(m_hideTarget, Deceleration.fast);
+                    }
+                    else
+                    {
+                        // Else 逃离物体
+                        return Evade(vehicle);
+                    }
+                }
+            }
 
             return Vector3.zero;
+        }
+
+        bool GetHidingPosition(out Vector3 hidePointer)
+        {
+            hidePointer = Vector3.zero;
+            Transform[] obstacleByHide = CurVehicle.gameWorld.ObstaclesByHide;
+            Transform closetObstacle = null;
+            float closetDst = float.MaxValue;
+            int findRadius = 15;
+            for (int i = 0; i < obstacleByHide.Length; i++)
+            {
+                // 找到最近的躲避物 （在一定范围内的物体）
+                float toObstacleDst = Vector3.Distance(obstacleByHide[i].position, CurVehicle.transform.position);
+                if (toObstacleDst < findRadius)
+                {
+                    if (toObstacleDst < closetDst)
+                    {
+                        closetDst = toObstacleDst;
+                        closetObstacle = obstacleByHide[i];
+                    }
+                }
+            }
+
+            if(closetDst != float.MaxValue)
+            {
+                // 计算躲藏点
+                RaycastHit hitInfo;
+
+                if (Physics.Raycast(CurVehicle.transform.position, closetObstacle.position - CurVehicle.transform.position, out hitInfo, findRadius, LayerMask.GetMask(ObstacleMaskName)))
+                {
+                    hidePointer = (closetObstacle.position - hitInfo.point)*2 + closetObstacle.position;
+
+                    return true;
+                }
+            }
+            return false;
         }
 
         public Vector3 Calculate()
@@ -200,13 +282,19 @@ namespace Steering
                 TargetPos = targetPos;
             }
 
-            if (EscapeVehicle != null)
+            if (CurVehicle.EscapeVehicle != null)
             {
-                TargetPos = EscapeVehicle.transform.position;
-                return Evade(EscapeVehicle) * ForceMultiple;
+                TargetPos = CurVehicle.EscapeVehicle.transform.position;
+                return Evade(CurVehicle.EscapeVehicle) * ForceMultiple;
             }
 
-            //return (Arrive(targetPos) + 2 * ObstacleAvoidance()) * ForceMultiple;
+            if (CurVehicle.HideVehicle != null)
+            {
+                TargetPos = CurVehicle.HideVehicle.transform.position;
+                return (Hide(CurVehicle.HideVehicle) + 2 * ObstacleAvoidance()) * ForceMultiple;
+            }
+
+            //return (Arrive(targetPos)) * ForceMultiple;
             return (Wander() + 2 * ObstacleAvoidance() + 2 * WallAvoidance()) * ForceMultiple;
         }
 
