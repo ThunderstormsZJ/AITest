@@ -233,6 +233,7 @@ MonoBehaviour:
   - {fileID: 441203285}
   - {fileID: 441203284}
   - {fileID: 1116553875}
+  pathCreator: {fileID: 855228125}
 --- !u!4 &97219596
 Transform:
   m_ObjectHideFlags: 0
@@ -1270,7 +1271,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 855228123}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 4.75}
+  m_LocalPosition: {x: -0.01, y: 0, z: 4.59}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1285,24 +1286,66 @@ MonoBehaviour:
   m_GameObject: {fileID: 855228123}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bbb3d858fee0e2e419eb7a1dd3d9c065, type: 3}
+  m_Script: {fileID: 11500000, guid: 8e5ac92bc18f545cc84cd886ece82b4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  path:
-    points:
-    - {x: -3, y: 0, z: 4.75}
-    - {x: -1.5, y: 0, z: 6.25}
-    - {x: 1.5, y: 0, z: 3.25}
-    - {x: 3, y: 0, z: 4.75}
-    isClosed: 0
-    autoSetControllPoints: 0
-  AnchorColor: {r: 1, g: 0, b: 0, a: 1}
-  ControlColor: {r: 0.6037736, g: 0.51548594, b: 0.51548594, a: 1}
-  SegmentColor: {r: 0, g: 1, b: 0, a: 1}
-  SelectedSegmentColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  AnchorDiameter: 0.37
-  ControlDiameter: 0.3
-  DisplayControlPoints: 1
+  editorData:
+    _bezierPath:
+      points:
+      - {x: 2.105703, y: 0, z: -0.43516064}
+      - {x: 7.875639, y: 0, z: 4.11241}
+      - {x: 8.69016, y: 0, z: -8.335807}
+      - {x: 16.58586, y: 0, z: -8.206345}
+      - {x: 29.00919, y: 0, z: -8.0026455}
+      - {x: 34.147118, y: 0, z: -1.5801535}
+      - {x: 39.168415, y: 0, z: -2.0472355}
+      - {x: 46.57285, y: 0, z: -2.7359974}
+      - {x: 42.46933, y: 0, z: 7.82368}
+      - {x: 39.21225, y: 0, z: 12.825499}
+      - {x: 35.725704, y: 0, z: 18.179699}
+      - {x: 29.525703, y: 0, z: 25.276188}
+      - {x: 21.848486, y: 0, z: 23.415022}
+      - {x: 10.339419, y: 0, z: 20.624912}
+      - {x: 3.1865938, y: 0, z: 22.480629}
+      - {x: -7.609329, y: 0, z: 21.633741}
+      isClosed: 0
+      space: 2
+      controlMode: 0
+      autoControlLength: 0.3
+      boundsUpToDate: 0
+      bounds:
+        m_Center: {x: 0, y: 0, z: 0}
+        m_Extent: {x: 2, y: 0.14433756, z: 0}
+      perAnchorNormalsAngle:
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      globalNormalsAngle: 0
+      flipNormals: 0
+    vertexPathUpToDate: 0
+    vertexPathMaxAngleError: 0.3
+    vertexPathMinVertexSpacing: 0.01
+    showTransformTool: 1
+    showPathBounds: 0
+    showPerSegmentBounds: 0
+    displayAnchorPoints: 1
+    displayControlPoints: 1
+    bezierHandleScale: 1
+    globalDisplaySettingsFoldout: 0
+    keepConstantHandleSize: 0
+    showNormalsInVertexMode: 0
+    showBezierPathInVertexMode: 0
+    showDisplayOptions: 0
+    showPathOptions: 1
+    showVertexPathDisplayOptions: 0
+    showVertexPathOptions: 1
+    showNormals: 0
+    showNormalsHelpInfo: 0
+    tabIndex: 0
+  initialized: 1
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0
@@ -1601,7 +1644,7 @@ PrefabInstance:
     - target: {fileID: 2537172218657203805, guid: f4c48fdacece3464f9b48a66f3302c09,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2537172218657203805, guid: f4c48fdacece3464f9b48a66f3302c09,
         type: 3}
@@ -1723,18 +1766,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
---- !u!114 &1180528740 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1556425065, guid: f4c48fdacece3464f9b48a66f3302c09,
-    type: 3}
-  m_PrefabInstance: {fileID: 1180528739}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85d81d19b68fe8541a992db741e50089, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1449591443
 GameObject:
   m_ObjectHideFlags: 0
@@ -2119,10 +2150,6 @@ PrefabInstance:
       propertyPath: testSP
       value: 
       objectReference: {fileID: 0}
-    - target: {fileID: 1556425065, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
-      propertyPath: HideVehicle
-      value: 
-      objectReference: {fileID: 1180528740}
     - target: {fileID: 1892226287, guid: f4c48fdacece3464f9b48a66f3302c09, type: 3}
       propertyPath: m_IsKinematic
       value: 0

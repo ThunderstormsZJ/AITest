@@ -201,7 +201,7 @@ namespace Steering
             return Arrive(midPoint);
         }
 
-        // 躲避物体
+        #region 躲避物体
         public Vector3 Hide(Vehicle vehicle)
         {
             // 加上时间元素
@@ -270,11 +270,53 @@ namespace Steering
             }
             return false;
         }
+        #endregion
+
+        // 路径跟随
+        public Vector3 FollowPath(Vector3 targetPos, bool isFinish = false)
+        {
+            if (isFinish)
+            {
+                return Arrive(targetPos, Deceleration.fast);
+            }
+            else
+            {
+                return Seek(targetPos);
+            }
+        }
+
+        // 按照偏移跟随领头
+        public Vector3 OffsetPursuit(Vehicle leader, Vector3 offset)
+        {
+            // 计算偏移的位置
+            Vector3 offsetWorldPos = AIUtils.InverseTransformPointUnscaled(CurVehicle.transform, offset);
+
+            // 预测前进的时间
+            float lookAheadTime = Vector3.Distance(leader.transform.position, offsetWorldPos) / (leader.Velocity.magnitude + CurVehicle.MaxSpeed);
+
+            return Arrive(leader.Velocity * lookAheadTime + offsetWorldPos, Deceleration.fast);
+        }
 
         public Vector3 Calculate()
         {
+            GameWorld gameWorld = CurVehicle.gameWorld;
             Transform target = CurVehicle.gameWorld.TargetPicker;
             Vector3 targetPos = CurVehicle.transform.position;
+
+            if (CurVehicle.gameWorld.pathCreator != null)
+            {
+                PathCreation.PathCreator pathCreator = gameWorld.pathCreator;
+                Vector3 closetPathPoint = pathCreator.path.GetClosestPointOnPath(CurVehicle.transform.position+CurVehicle.transform.forward);
+                Vector3 lastPointPos = pathCreator.path.GetPoint(pathCreator.path.NumPoints - 1);
+                bool isFinish = false;
+                if (!pathCreator.path.isClosedLoop && Vector3.Distance(CurVehicle.transform.position, lastPointPos) < 5f)
+                {
+                    isFinish = true;
+                    closetPathPoint = lastPointPos;
+                    TargetPos = closetPathPoint;
+                }
+                return FollowPath(closetPathPoint, isFinish);
+            }
 
             if (target != null)
             {
