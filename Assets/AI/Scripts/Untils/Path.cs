@@ -74,12 +74,62 @@ public class Path
         return new Vector3[]{ points[i*3], points[i*3+1], points[i*3+2], this[i*3+3] };
     }
 
+    /// <summary>
+    /// 分割曲线
+    /// </summary>
+    /// <param name="anchorPos">分割的锚点</param>
+    /// <param name="segmentIndex">分割曲线的索引</param>
+    public void SplitSegment(Vector3 anchorPos, int segmentIndex)
+    {
+        points.InsertRange(segmentIndex * 3 + 2, new Vector3[] { Vector3.zero, anchorPos, Vector3.zero });
+        if (autoSetControllPoints)
+        {
+            AutoSetAllAffectedControlPoints(segmentIndex * 3 + 3);
+        }
+        else
+        {
+            AutoSetAnchorControlPoints(segmentIndex * 3 + 3);
+        }
+    }
+
+    public void DeleteSegment(int anchorIndex)
+    {
+        // 闭合时需要有两端
+        if (NumSegments > 2 || !isClosed && NumSegments > 1)
+        {
+            if (anchorIndex == 0)
+            {
+                if (isClosed)
+                {
+                    points[points.Count - 1] = points[2];
+                }
+                points.RemoveRange(anchorIndex, 3);
+            }
+            else if (anchorIndex == points.Count-1 && !isClosed)
+            {
+                points.RemoveRange(anchorIndex - 3, 3);
+            }
+            else
+            {
+                points.RemoveRange(anchorIndex - 1, 3);
+            }
+
+            if (autoSetControllPoints)
+            {
+                AutoSetAllAffectedControlPoints(anchorIndex);
+            }
+        }
+    }
+
     public void AddSegment(Vector3 anchorPos)
     {
         points.Add(points[points.Count - 1] * 2 - points[points.Count - 2]);
         points.Add((points[points.Count - 1] + anchorPos) / 2);
         points.Add(anchorPos);
-
+        if (autoSetControllPoints)
+        {
+            AutoSetAllAffectedControlPoints(points.Count - 1);
+        }
     }
 
     public void ToggleClosed()
@@ -116,11 +166,11 @@ public class Path
                 if (i % 3 == 0)
                 {
                     // 控制点
-                    if (IndexInRange(i))
+                    if (IndexInRange(i+1))
                     {
                         this[i + 1] += detalPos;
                     }
-                    if (IndexInRange(i))
+                    if (IndexInRange(i-1))
                     {
                         this[i - 1] += detalPos;
                     }
