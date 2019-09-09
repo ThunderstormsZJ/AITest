@@ -117,11 +117,11 @@ public class FieldOfView : MonoBehaviour
                 {
                     // 只在有障碍物和无障碍物之间的点检测
                     EdgetInfo edgetInfo = FindEdget(oldCastInfo, newCastInfo, viewMask);
-                    if (edgetInfo.minCastInfo.pointer != Vector3.zero)
+                    if (edgetInfo.minCastInfo.pointer != Vector3.zero && (!isHitPoint || edgetInfo.minCastInfo.hit))
                     {
                         viewCastInfoList.Add(edgetInfo.minCastInfo);
                     }
-                    if (edgetInfo.maxCastInfo.pointer != Vector3.zero)
+                    if (edgetInfo.maxCastInfo.pointer != Vector3.zero && (!isHitPoint || edgetInfo.maxCastInfo.hit))
                     {
                         viewCastInfoList.Add(edgetInfo.maxCastInfo);
                     }
@@ -263,6 +263,11 @@ public class FieldOfView : MonoBehaviour
             this.normal = normal;
             this.dst = dst;
             this.angle = angle;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("pointer[{0}]-normal[{1}]-dst[{2}]-angle[{3}]", pointer, normal, dst, angle);
         }
     }
 

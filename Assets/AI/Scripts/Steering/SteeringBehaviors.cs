@@ -167,7 +167,7 @@ namespace Steering
                 FieldOfView.ViewCastInfo closetCastInfo = castInfoList[0];
                 for (int i = 1; i < castInfoList.Count; i++)
                 {
-                    if (closetCastInfo.pointer.sqrMagnitude > castInfoList[i].pointer.sqrMagnitude)
+                    if (closetCastInfo.dst > castInfoList[i].dst)
                     {
                         closetCastInfo = castInfoList[i];
                     }
@@ -303,20 +303,20 @@ namespace Steering
             Transform target = CurVehicle.gameWorld.TargetPicker;
             Vector3 targetPos = CurVehicle.transform.position;
 
-            if (CurVehicle.gameWorld.pathCreator != null)
-            {
-                PathCreation.PathCreator pathCreator = gameWorld.pathCreator;
-                Vector3 closetPathPoint = pathCreator.path.GetClosestPointOnPath(CurVehicle.transform.position+CurVehicle.transform.forward);
-                Vector3 lastPointPos = pathCreator.path.GetPoint(pathCreator.path.NumPoints - 1);
-                bool isFinish = false;
-                if (!pathCreator.path.isClosedLoop && Vector3.Distance(CurVehicle.transform.position, lastPointPos) < 5f)
-                {
-                    isFinish = true;
-                    closetPathPoint = lastPointPos;
-                    TargetPos = closetPathPoint;
-                }
-                return FollowPath(closetPathPoint, isFinish);
-            }
+            //if (CurVehicle.gameWorld.pathCreator != null)
+            //{
+            //    PathCreation.PathCreator pathCreator = gameWorld.pathCreator;
+            //    Vector3 closetPathPoint = pathCreator.path.GetClosestPointOnPath(CurVehicle.transform.position+CurVehicle.transform.forward);
+            //    Vector3 lastPointPos = pathCreator.path.GetPoint(pathCreator.path.NumPoints - 1);
+            //    bool isFinish = false;
+            //    if (!pathCreator.path.isClosedLoop && Vector3.Distance(CurVehicle.transform.position, lastPointPos) < 5f)
+            //    {
+            //        isFinish = true;
+            //        closetPathPoint = lastPointPos;
+            //        TargetPos = closetPathPoint;
+            //    }
+            //    return FollowPath(closetPathPoint, isFinish);
+            //}
 
             if (target != null)
             {
@@ -337,7 +337,7 @@ namespace Steering
             }
 
             //return (Arrive(targetPos)) * ForceMultiple;
-            return (Wander() + 2 * ObstacleAvoidance() + 2 * WallAvoidance()) * ForceMultiple;
+            return (Wander() + 2 * ObstacleAvoidance() + 3 * WallAvoidance()) * ForceMultiple;
         }
 
         /// <summary>
