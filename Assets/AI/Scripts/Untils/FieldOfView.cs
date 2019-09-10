@@ -48,7 +48,7 @@ public class FieldOfView : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(delay);
-            //FindVisibleTargets();
+            FindVisibleTargets();
         }
     }
 
@@ -61,7 +61,7 @@ public class FieldOfView : MonoBehaviour
         for (int i = 0; i < targetsInViewRadius.Length; i++)
         {
             Transform target = targetsInViewRadius[i].transform;
-            if (CheckInView(target, ObstacleMask))
+            if (CheckInView(target, ObstacleMask) && target != transform)
             {
                 VisibleTargets.Add(target);
             }

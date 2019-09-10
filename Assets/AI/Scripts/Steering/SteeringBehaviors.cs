@@ -297,6 +297,36 @@ namespace Steering
             return Arrive(leader.Velocity * lookAheadTime + offsetWorldPos, Deceleration.fast);
         }
 
+        #region 组行为
+        // 分离
+        public Vector3 Separation(Vehicle[] neighbors)
+        {
+            Vector3 force = Vector3.zero;
+
+            for (int i = 0; i < neighbors.Length; i++)
+            {
+                Vector3 toAgent = CurVehicle.transform.position - neighbors[i].transform.position;
+
+                force += toAgent.normalized * CurVehicle.fieldOfView.ViewRadius / toAgent.magnitude;
+            }
+
+            Debug.DrawLine(CurVehicle.transform.position, CurVehicle.transform.position + force, Color.red);
+
+            return force;
+        }
+
+        // 队列
+        public Vector3 Alignment(Vehicle[] neighbors)
+        {
+            Vector3 force = Vector3.zero;
+
+
+
+            return force;
+        }
+
+        #endregion
+
         public Vector3 Calculate()
         {
             GameWorld gameWorld = CurVehicle.gameWorld;
@@ -334,6 +364,19 @@ namespace Steering
             {
                 TargetPos = CurVehicle.HideVehicle.transform.position;
                 return (Hide(CurVehicle.HideVehicle) + 2 * ObstacleAvoidance()) * ForceMultiple;
+            }
+
+            if (CurVehicle.fieldOfView.VisibleTargets.Count > 0)
+            {
+                List<Vehicle> neighbors = new List<Vehicle>();
+                List<Transform> visibleTarget = CurVehicle.fieldOfView.VisibleTargets;
+                for (int i = 0; i < visibleTarget.Count; i++)
+                {
+                    neighbors.Add(visibleTarget[i].GetComponent<Vehicle>());
+                }
+
+                Debug.Log(CurVehicle.transform + " look " + neighbors.Count);
+                return Separation(neighbors.ToArray()) * ForceMultiple;
             }
 
             //return (Arrive(targetPos)) * ForceMultiple;
