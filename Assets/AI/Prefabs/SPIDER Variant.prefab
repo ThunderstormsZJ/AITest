@@ -66,7 +66,6 @@ MonoBehaviour:
   WanderDistance: 3
   WanderJitter: 2
   fieldOfView: {fileID: 0}
-  EscapeVehicle: {fileID: 0}
 --- !u!114 &187501855710213359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -80,7 +79,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ViewRadius: 6
-  ViewAngle: 60
+  ViewAngle: 120
   MeshResolution: 0.15
   EdgeResolveIterations: 10
   EdgeDstThreshold: 0.5

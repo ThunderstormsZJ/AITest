@@ -12,6 +12,12 @@ public class Spider : Vehicle
         base.OnStart();
 
         animator = GetComponent<Animator>();
+
+        steeringBehaviors.WallAvoidanceOn();
+        steeringBehaviors.ObstacleAvoidanceOn();
+        steeringBehaviors.WanderOn();
+        //steeringBehaviors.ArriveOn();
+        steeringBehaviors.FlockingOn();
     }
 
     protected override void OnUpdate()

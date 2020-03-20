@@ -7,17 +7,13 @@ namespace Steering
     [RequireComponent(typeof(FieldOfView))]
     public class Vehicle : MovingEntity
     {
-        public GameWorld gameWorld;
-
         [Header("=======Wander Param=======")]
         public float WanderRadius = 10; // 徘徊圆的半径
         public float WanderDistance = 3f; //  徘徊圆在智能体前的位置
         public float WanderJitter = 2f; // 徘徊每秒随机的最大值
 
-        [Header("==========Target==========")]
-        public Vehicle EscapeVehicle;
-        public Vehicle HideVehicle;
-
+        [HideInInspector]
+        public GameWorld gameWorld;
         [HideInInspector]
         public SteeringBehaviors steeringBehaviors;
         [HideInInspector]
@@ -33,6 +29,7 @@ namespace Steering
         {
             base.OnStart();
 
+            gameWorld = GameObject.Find("GameWorld").GetComponent<GameWorld>();
             steeringBehaviors = new SteeringBehaviors(this);
             entityRigidbody = GetComponent<Rigidbody>();
             boxCollider = GetComponent<BoxCollider>();
@@ -71,7 +68,7 @@ namespace Steering
             Velocity += acceleration * Time.deltaTime;
 
             // 确保不超过最大速度
-            Velocity = Vector3.ClampMagnitude(Velocity, MaxSpeed);
+            Velocity = Vector3.ClampMagnitude(Velocity, GameWorldSettings.Instance.MaxSpeed);
             Velocity = new Vector3(Velocity.x, 0, Velocity.z);
 #if UNITY_EDITOR
             Debug.DrawLine(transform.position, transform.position + Velocity.normalized * 10, Color.black);

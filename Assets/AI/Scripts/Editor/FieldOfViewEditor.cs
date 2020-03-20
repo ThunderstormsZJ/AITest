@@ -15,11 +15,5 @@ public class FieldOfViewEditor : Editor
         // 视野角度
         Handles.DrawLine(fow.transform.position, fow.transform.position + viewDirA * fow.ViewRadius);
         Handles.DrawLine(fow.transform.position, fow.transform.position + viewDirB * fow.ViewRadius);
-
-        Handles.color = Color.red;
-        foreach (Transform visibleTarget in fow.VisibleTargets)
-        {
-            Handles.DrawLine(fow.transform.position, visibleTarget.position);
-        }
-    }
+       }
 }

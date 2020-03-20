@@ -6,7 +6,6 @@ namespace Steering
     public class SteeringBehaviors
     {
         public float PanicDistance = 5; //恐惧范围
-        public float ForceMultiple = 2; //力的乘数 -- 可以影响转向的灵敏程度
 
         public Vehicle CurVehicle { get; private set; }
         public Vector3 TargetPos { get; private set; }
@@ -15,9 +14,15 @@ namespace Steering
         public readonly string ObstacleMaskName = "Obstacle";
         public readonly string WallMaskName = "Wall";
 
+        int m_iFlags; // 已开启行为的标识
+        float m_memoryTime; // 记忆时间
+
+        Vehicle m_pTargetAgent1; // 目标1
+        Vehicle m_pTargetAgent2; // 目标2
+
         Vector3 m_wanderTarget; // 徘徊的点
         Vector3 m_hideTarget; // 隐藏的点
-        float m_memoryTime; // 记忆时间
+        Vector3 m_vOffset; // 距离领头的偏移量
 
         public SteeringBehaviors(Vehicle vehicle)
         {
@@ -31,7 +36,7 @@ namespace Steering
         // 靠近
         public Vector3 Seek(Vector3 targetPos)
         {
-            Vector3 desiredVelocity = (targetPos - CurVehicle.transform.position).normalized * CurVehicle.MaxSpeed;
+            Vector3 desiredVelocity = (targetPos - CurVehicle.transform.position).normalized * GameWorldSettings.Instance.MaxSpeed;
             return (desiredVelocity - CurVehicle.Velocity);
         }
 
@@ -43,7 +48,7 @@ namespace Steering
                 return Vector3.zero;
             }
             // 在一定范围内才离开
-            Vector3 desiredVelocity = (CurVehicle.transform.position - targetPos).normalized * CurVehicle.MaxSpeed;
+            Vector3 desiredVelocity = (CurVehicle.transform.position - targetPos).normalized * GameWorldSettings.Instance.MaxSpeed;
             return (desiredVelocity - CurVehicle.Velocity);
         }
 
@@ -57,7 +62,7 @@ namespace Steering
             {
                 // 计算期望的速度
                 float speed = dist / ((int)deceleration * 0.8f);
-                speed = Mathf.Clamp(speed, 1f, CurVehicle.MaxSpeed);
+                speed = Mathf.Clamp(speed, 1f, GameWorldSettings.Instance.MaxSpeed);
 
                 // 不需要标准化向量， 因为能够取得向量长度
                 Vector3 desiredVelocity = toTarget * speed / dist;
@@ -83,7 +88,7 @@ namespace Steering
 
             // 预测逃避位置
             // 预测时间 正比与逃离物体之间距离， 反比追逐物体最大速度
-            float lookAheadTime = toVehicle.magnitude / (CurVehicle.MaxSpeed);
+            float lookAheadTime = toVehicle.magnitude / (GameWorldSettings.Instance.MaxSpeed);
 
             // 加上转向时间
             lookAheadTime += TurnaroundTime(CurVehicle, vehicle.transform.position);
@@ -98,7 +103,7 @@ namespace Steering
             // 逃离预测位置
             Vector3 toVehicle = vehicle.transform.position - CurVehicle.transform.position;
 
-            float lookAheadTime = toVehicle.magnitude / (CurVehicle.MaxSpeed);
+            float lookAheadTime = toVehicle.magnitude / (GameWorldSettings.Instance.MaxSpeed);
 
             return Flee(vehicle.transform.position + vehicle.Velocity * lookAheadTime);
         }
@@ -106,7 +111,7 @@ namespace Steering
         // 徘徊
         public Vector3 Wander()
         {
-            float jitterTimeSlice = CurVehicle.WanderJitter * Time.fixedDeltaTime * 1000;
+            float jitterTimeSlice = CurVehicle.WanderJitter * Time.fixedDeltaTime;
             m_wanderTarget += new Vector3(Random.Range(-1.0f, 1.0f) * jitterTimeSlice, 0, Random.Range(-1.0f, 1.0f) * jitterTimeSlice);
             // 重新映射到圆上
             m_wanderTarget = m_wanderTarget.normalized * CurVehicle.WanderRadius;
@@ -116,7 +121,7 @@ namespace Steering
             //Vector3 targetWorld = CurVehicle.transform.TransformPoint(targetLocal);
             Vector3 targetWorld = AIUtils.TransformPointUnscaled(CurVehicle.transform, targetLocal);
 
-            return (targetWorld - CurVehicle.transform.position);
+            return (targetWorld - CurVehicle.transform.position) / (CurVehicle.WanderDistance + CurVehicle.WanderRadius);
         }
 
         // 避开障碍
@@ -189,7 +194,7 @@ namespace Steering
         {
             // 预测时间- 到达两个物体中点的时间
             Vector3 midPoint = (vehicleA.transform.position + vehicleB.transform.position) / 2;
-            float timeToReachMidPoint = (midPoint - CurVehicle.transform.position).magnitude / CurVehicle.MaxSpeed;
+            float timeToReachMidPoint = (midPoint - CurVehicle.transform.position).magnitude / GameWorldSettings.Instance.MaxSpeed;
 
             // 预测在T时间内两物体的位置
             Vector3 aPoint = vehicleA.transform.position + vehicleA.Velocity * timeToReachMidPoint;
@@ -273,16 +278,31 @@ namespace Steering
         #endregion
 
         // 路径跟随
-        public Vector3 FollowPath(Vector3 targetPos, bool isFinish = false)
+        public Vector3 FollowPath()
         {
-            if (isFinish)
+            PathCreation.PathCreator pathCreator = CurVehicle.gameWorld.pathCreator;
+            if (pathCreator != null)
             {
-                return Arrive(targetPos, Deceleration.fast);
+                Vector3 closetPathPoint = pathCreator.path.GetClosestPointOnPath(CurVehicle.transform.position + CurVehicle.transform.forward);
+                Vector3 lastPointPos = pathCreator.path.GetPoint(pathCreator.path.NumPoints - 1);
+                bool isFinish = false;
+                if (!pathCreator.path.isClosedLoop && Vector3.Distance(CurVehicle.transform.position, lastPointPos) < 5f)
+                {
+                    isFinish = true;
+                    closetPathPoint = lastPointPos;
+                    TargetPos = closetPathPoint;
+                }
+                if (isFinish)
+                {
+                    return Arrive(closetPathPoint, Deceleration.fast);
+                }
+                else
+                {
+                    return Seek(closetPathPoint);
+                }
             }
-            else
-            {
-                return Seek(targetPos);
-            }
+
+            return Vector3.zero;
         }
 
         // 按照偏移跟随领头
@@ -292,7 +312,7 @@ namespace Steering
             Vector3 offsetWorldPos = AIUtils.InverseTransformPointUnscaled(CurVehicle.transform, offset);
 
             // 预测前进的时间
-            float lookAheadTime = Vector3.Distance(leader.transform.position, offsetWorldPos) / (leader.Velocity.magnitude + CurVehicle.MaxSpeed);
+            float lookAheadTime = Vector3.Distance(leader.transform.position, offsetWorldPos) / (leader.Velocity.magnitude + GameWorldSettings.Instance.MaxSpeed);
 
             return Arrive(leader.Velocity * lookAheadTime + offsetWorldPos, Deceleration.fast);
         }
@@ -315,72 +335,193 @@ namespace Steering
             return force;
         }
 
-        // 队列
+        // 队列： 朝向保持和邻居一致
         public Vector3 Alignment(Vehicle[] neighbors)
         {
-            Vector3 force = Vector3.zero;
+            Vector3 averageForward = Vector3.zero;
 
+            for (int i = 0; i < neighbors.Length; i++)
+            {
+                averageForward += neighbors[i].transform.forward;
+            }
 
+            // 计算出朝向平均值
+            if (neighbors.Length > 0)
+            {
+                averageForward /= neighbors.Length;
+
+                averageForward -= CurVehicle.transform.forward;
+            }
+            return averageForward;
+        }
+
+        // 聚集： 移向邻居得质点
+        public Vector3 Cohesion(Vehicle[] neighbors)
+        {
+            Vector3 averageCenterOfMass, force;
+            averageCenterOfMass = force = Vector3.zero;
+
+            for (int i = 0; i < neighbors.Length; i++)
+            {
+                averageCenterOfMass += neighbors[i].transform.position;
+            }
+
+            // 计算出质点得平均值
+            if (neighbors.Length > 0)
+            {
+                averageCenterOfMass /= neighbors.Length;
+                force = Seek(averageCenterOfMass);
+            }
 
             return force;
         }
-
         #endregion
 
         public Vector3 Calculate()
         {
-            GameWorld gameWorld = CurVehicle.gameWorld;
-            Transform target = CurVehicle.gameWorld.TargetPicker;
-            Vector3 targetPos = CurVehicle.transform.position;
+            return CalculatePrioritized() * GameWorldSettings.Instance.ForceMultiper;
+        }
 
-            //if (CurVehicle.gameWorld.pathCreator != null)
-            //{
-            //    PathCreation.PathCreator pathCreator = gameWorld.pathCreator;
-            //    Vector3 closetPathPoint = pathCreator.path.GetClosestPointOnPath(CurVehicle.transform.position+CurVehicle.transform.forward);
-            //    Vector3 lastPointPos = pathCreator.path.GetPoint(pathCreator.path.NumPoints - 1);
-            //    bool isFinish = false;
-            //    if (!pathCreator.path.isClosedLoop && Vector3.Distance(CurVehicle.transform.position, lastPointPos) < 5f)
-            //    {
-            //        isFinish = true;
-            //        closetPathPoint = lastPointPos;
-            //        TargetPos = closetPathPoint;
-            //    }
-            //    return FollowPath(closetPathPoint, isFinish);
-            //}
+        /// <summary>
+        /// 带优先级的加权截断累计
+        /// 在计算行为会根据优先级的高低来优先进行加权运算
+        /// </summary>
+        /// <returns>Force</returns>
+        public Vector3 CalculatePrioritized()
+        {
+            Vector3 force = Vector3.zero;
+            Vector3 steeringFore = Vector3.zero;
+            Transform targetPicker = CurVehicle.gameWorld.TargetPicker;
 
-            if (target != null)
+            if (On(BehaviorType.WallAvoidance))
             {
-                targetPos = target.position;
-                TargetPos = targetPos;
+                force = WallAvoidance() * GameWorldSettings.Instance.WallAvoidanceWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
             }
 
-            if (CurVehicle.EscapeVehicle != null)
+            if (On(BehaviorType.ObstacleAvoidance))
             {
-                TargetPos = CurVehicle.EscapeVehicle.transform.position;
-                return Evade(CurVehicle.EscapeVehicle) * ForceMultiple;
+                force = ObstacleAvoidance() * GameWorldSettings.Instance.ObstacleAvoidanceWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
             }
 
-            if (CurVehicle.HideVehicle != null)
+            if (On(BehaviorType.Evade) && m_pTargetAgent1!=null)
             {
-                TargetPos = CurVehicle.HideVehicle.transform.position;
-                return (Hide(CurVehicle.HideVehicle) + 2 * ObstacleAvoidance()) * ForceMultiple;
+                force = Evade(m_pTargetAgent1) * GameWorldSettings.Instance.EvadeWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
             }
 
-            if (CurVehicle.fieldOfView.VisibleTargets.Count > 0)
+            if (On(BehaviorType.Flee) && targetPicker!=null)
             {
-                List<Vehicle> neighbors = new List<Vehicle>();
-                List<Transform> visibleTarget = CurVehicle.fieldOfView.VisibleTargets;
-                for (int i = 0; i < visibleTarget.Count; i++)
-                {
-                    neighbors.Add(visibleTarget[i].GetComponent<Vehicle>());
-                }
-
-                Debug.Log(CurVehicle.transform + " look " + neighbors.Count);
-                return Separation(neighbors.ToArray()) * ForceMultiple;
+                force = Flee(targetPicker.position) * GameWorldSettings.Instance.FleeWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
             }
 
-            //return (Arrive(targetPos)) * ForceMultiple;
-            return (Wander() + 2 * ObstacleAvoidance() + 3 * WallAvoidance()) * ForceMultiple;
+            if (On(BehaviorType.Separation))
+            {
+                force = Separation(FindNeighbors()) * GameWorldSettings.Instance.SeparationWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Allignment))
+            {
+                force = Alignment(FindNeighbors()) * GameWorldSettings.Instance.AlignmentWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Cohesion))
+            {
+                force = Cohesion(FindNeighbors()) * GameWorldSettings.Instance.CohesionWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Seek) && targetPicker != null)
+            {
+                force = Seek(targetPicker.position) * GameWorldSettings.Instance.SeekWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Arrive) && targetPicker != null)
+            {
+                force = Arrive(targetPicker.position) * GameWorldSettings.Instance.ArriveWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Wander))
+            {
+                force = Wander() * GameWorldSettings.Instance.WanderWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Pursuit) && m_pTargetAgent1!=null)
+            {
+                force = Pursuit(m_pTargetAgent1) * GameWorldSettings.Instance.PursuitWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.OffsetPursuit) && m_pTargetAgent1!=null)
+            {
+                force = OffsetPursuit(m_pTargetAgent1, m_vOffset);
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Interpose) && m_pTargetAgent1!=null && m_pTargetAgent2!=null)
+            {
+                force = Interpose(m_pTargetAgent1, m_pTargetAgent2) * GameWorldSettings.Instance.InterposeWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Hide) && m_pTargetAgent1!=null)
+            {
+                force = Hide(m_pTargetAgent1) * GameWorldSettings.Instance.HideWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            if (On(BehaviorType.Hide))
+            {
+                force = FollowPath() * GameWorldSettings.Instance.FollowPathWeight;
+                if (!AccumulateForce(ref steeringFore, force)) return steeringFore;
+            }
+
+            return steeringFore;
+        }
+
+        Vehicle[] FindNeighbors()
+        {
+            List<Vehicle> neighbors = new List<Vehicle>();
+            List<Transform> visibleTarget = CurVehicle.fieldOfView.VisibleTargets;
+            for (int i = 0; i < visibleTarget.Count; i++)
+            {
+                neighbors.Add(visibleTarget[i].GetComponent<Vehicle>());
+            }
+
+            return neighbors.ToArray();
+        }
+
+        /// <summary>
+        /// 计算剩余的牵引力
+        /// </summary>
+        /// <param name="runingTot">当前运行的牵引力</param>
+        /// <param name="forceToAdd">需要附加的力</param>
+        /// <returns></returns>
+        bool AccumulateForce(ref Vector3 runingTot, Vector3 forceToAdd)
+        {
+            // remaind force
+            float remaindForce = GameWorldSettings.Instance.MaxForce - runingTot.magnitude;
+            if (remaindForce < 0) return false;
+
+            float forceToAddMagnitude = forceToAdd.magnitude;
+
+            if (forceToAddMagnitude < remaindForce)
+            {
+                runingTot += forceToAdd;
+            }
+            else
+            {
+                runingTot += remaindForce * forceToAdd.normalized;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -400,6 +541,43 @@ namespace Steering
             // 角度越大时间越大
             return (dot - 1) * - coefficient;
         }
+
+        public bool On(BehaviorType type) { return (m_iFlags & (int)type) == (int)type; }
+        // 开启行为
+        public void FleeOn() { m_iFlags |= (int)BehaviorType.Flee; }
+        public void SeekOn() { m_iFlags |= (int)BehaviorType.Seek; }
+        public void ArriveOn() { m_iFlags |= (int)BehaviorType.Arrive; }
+        public void WanderOn() { m_iFlags |= (int)BehaviorType.Wander; }
+        public void PursuitOn(Vehicle v) { m_iFlags |= (int)BehaviorType.Pursuit; m_pTargetAgent1 = v; }
+        public void EvadeOn(Vehicle v) { m_iFlags |= (int)BehaviorType.Evade; m_pTargetAgent1 = v; }
+        public void CohesionOn() { m_iFlags |= (int)BehaviorType.Cohesion; }
+        public void SeparationOn() { m_iFlags |= (int)BehaviorType.Separation; }
+        public void AligmentOn() { m_iFlags |= (int)BehaviorType.Allignment; }
+        public void ObstacleAvoidanceOn() { m_iFlags |= (int)BehaviorType.ObstacleAvoidance; }
+        public void WallAvoidanceOn() { m_iFlags |= (int)BehaviorType.WallAvoidance; }
+        public void FollowOn() { m_iFlags |= (int)BehaviorType.FollowPath; }
+        public void InterposeOn(Vehicle v1, Vehicle v2) { m_iFlags |= (int)BehaviorType.Interpose; m_pTargetAgent1 = v1; m_pTargetAgent2 = v2; }
+        public void HideOn(Vehicle v) { m_iFlags |= (int)BehaviorType.Hide; m_pTargetAgent1 = v; }
+        public void OffsetPursuitOn(Vehicle v, Vector3 offset) { m_iFlags |= (int)BehaviorType.OffsetPursuit; m_pTargetAgent1 = v; m_vOffset = offset; }
+        public void FlockingOn() { CohesionOn();SeparationOn();AligmentOn();WanderOn(); }
+
+        // 关闭行为
+        public void FleeOff() { if (On(BehaviorType.Flee)) m_iFlags ^= (int)BehaviorType.Flee; }
+        public void SeekOff() { if (On(BehaviorType.Seek)) m_iFlags ^= (int)BehaviorType.Seek; }
+        public void ArriveOff() { if (On(BehaviorType.Arrive)) m_iFlags ^= (int)BehaviorType.Arrive; }
+        public void WanderOff() { if (On(BehaviorType.Wander)) m_iFlags ^= (int)BehaviorType.Wander; }
+        public void PursuitOff() { if (On(BehaviorType.Pursuit)) m_iFlags ^= (int)BehaviorType.Pursuit; }
+        public void EvadeOff() { if (On(BehaviorType.Evade)) m_iFlags ^= (int)BehaviorType.Evade; }
+        public void CohesionOff() { if (On(BehaviorType.Cohesion)) m_iFlags ^= (int)BehaviorType.Cohesion; }
+        public void SeparationOff() { if (On(BehaviorType.Separation)) m_iFlags ^= (int)BehaviorType.Separation; }
+        public void AligmentOff() { if (On(BehaviorType.Allignment)) m_iFlags ^= (int)BehaviorType.Allignment; }
+        public void ObstacleAvoidanceOff() { if (On(BehaviorType.ObstacleAvoidance)) m_iFlags ^= (int)BehaviorType.ObstacleAvoidance; }
+        public void WallAvoidanceOff() { if (On(BehaviorType.WallAvoidance)) m_iFlags ^= (int)BehaviorType.WallAvoidance; }
+        public void FollowOff() { if (On(BehaviorType.FollowPath)) m_iFlags ^= (int)BehaviorType.FollowPath; }
+        public void InterposeOff() { if (On(BehaviorType.Interpose)) m_iFlags ^= (int)BehaviorType.Interpose; }
+        public void HideOff() { if (On(BehaviorType.Hide)) m_iFlags ^= (int)BehaviorType.Hide; }
+        public void OffsetPursuitOff() { if (On(BehaviorType.OffsetPursuit)) m_iFlags ^= (int)BehaviorType.OffsetPursuit; }
+        public void FlockingOff() { CohesionOff();SeparationOff();AligmentOff();WanderOff(); }
 
         
     }
